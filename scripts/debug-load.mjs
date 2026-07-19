@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage();
+page.on('console', (m) => console.log('[' + m.type() + ']', m.text().slice(0, 400)));
+page.on('pageerror', (e) => console.log('[PAGEERROR]', e.message.slice(0, 600), '\n', (e.stack || '').slice(0, 600)));
+page.on('requestfailed', (r) => console.log('[REQFAIL]', r.url(), r.failure()?.errorText));
+await page.goto('http://localhost:5199/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(2500);
+console.log('__game =', await page.evaluate(() => typeof window.__game));
+await browser.close();

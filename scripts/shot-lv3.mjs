@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+page.on('pageerror', (e) => console.log('[PAGEERROR]', e.message));
+await page.goto('http://localhost:5199/', { waitUntil: 'networkidle' });
+await page.keyboard.press('Enter');
+await page.waitForTimeout(500);
+await page.evaluate(() => { const g = window.__game; g.startRun(2); g.player.invincible = 9999; });
+await page.waitForTimeout(6000);
+await page.screenshot({ path: '/tmp/raiden_level3.png' });
+console.log('done');
+await browser.close();

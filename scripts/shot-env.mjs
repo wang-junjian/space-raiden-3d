@@ -1,0 +1,18 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+page.on('pageerror', (e) => console.log('[PAGEERROR]', e.message));
+page.on('console', (m) => { if (m.type() === 'error') console.log('[ERR]', m.text().slice(0, 200)); });
+await page.goto('http://localhost:5199/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: '/tmp/env_title.png' });
+await page.keyboard.press('Enter');
+await page.waitForTimeout(1200);
+await page.evaluate(() => { window.__game.player.invincible = 9999; });
+await page.waitForTimeout(3500);
+await page.screenshot({ path: '/tmp/env_lv1.png' });
+await page.evaluate(() => window.__game.startRun(1));
+await page.waitForTimeout(4500);
+await page.screenshot({ path: '/tmp/env_lv2.png' });
+console.log('done');
+await browser.close();

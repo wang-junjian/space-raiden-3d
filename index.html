@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Space Raiden 3D · 星际雷电</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    body { font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    #game-canvas { display: block; width: 100%; height: 100%; }
+    /* 电影暗角：聚焦画面中心，增强纵深 */
+    #vignette {
+      position: fixed; inset: 0; z-index: 3; pointer-events: none;
+      background: radial-gradient(ellipse 105% 90% at center, transparent 52%, rgba(0, 1, 8, .5) 100%);
+    }
+
+    /* ---------- 覆盖层通用 ---------- */
+    .overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #cfe8ff; text-align: center; user-select: none;
+    }
+    .hidden { display: none !important; }
+
+    /* ---------- 标题画面 ---------- */
+    #screen-title { background: radial-gradient(ellipse at center, rgba(4,10,30,.25) 0%, rgba(0,0,5,.88) 100%); }
+    .game-logo {
+      font-size: clamp(42px, 9vw, 96px); font-weight: 900; letter-spacing: .12em;
+      background: linear-gradient(180deg, #aee2ff 0%, #3f8cff 45%, #7a2bff 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 24px rgba(63,140,255,.65));
+      animation: logoPulse 2.6s ease-in-out infinite;
+    }
+    .game-logo small {
+      display: block; font-size: .28em; letter-spacing: .9em; margin-top: 6px;
+      color: #9fd0ff; -webkit-text-fill-color: #9fd0ff; filter: none; font-weight: 400;
+    }
+    @keyframes logoPulse {
+      0%, 100% { filter: drop-shadow(0 0 18px rgba(63,140,255,.5)); }
+      50%      { filter: drop-shadow(0 0 40px rgba(122,43,255,.85)); }
+    }
+    .menu-hint {
+      margin-top: 48px; font-size: 18px; letter-spacing: .35em; color: #8fd8ff;
+      animation: blink 1.4s steps(2) infinite;
+    }
+    @keyframes blink { 50% { opacity: .15; } }
+    .menu-controls {
+      margin-top: 34px; font-size: 13px; line-height: 2; color: #6f87b8; letter-spacing: .15em;
+    }
+    .menu-controls b { color: #a8ccff; font-weight: 600; }
+    #hiscore-title { margin-top: 26px; font-size: 15px; color: #ffd76a; letter-spacing: .3em; }
+
+    /* ---------- HUD ---------- */
+    #hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; font-variant-numeric: tabular-nums; }
+    .hud-top {
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 14px 20px; font-size: 15px; letter-spacing: .12em;
+    }
+    .hud-score { color: #aee2ff; text-shadow: 0 0 10px rgba(80,160,255,.8); font-size: 19px; font-weight: 700; }
+    .hud-hiscore { color: #ffd76a; opacity: .85; font-size: 12px; margin-top: 2px; }
+    .hud-right { text-align: right; color: #9fd0ff; }
+    .hud-lives { font-size: 17px; letter-spacing: .25em; color: #ff8fb0; text-shadow: 0 0 8px rgba(255,80,140,.8); }
+    .hud-bombs { margin-top: 4px; font-size: 15px; letter-spacing: .25em; color: #8fffd0; text-shadow: 0 0 8px rgba(60,255,180,.7); }
+    .hud-bottom {
+      position: absolute; left: 20px; bottom: 16px; color: #7fa8e8; font-size: 13px; letter-spacing: .15em;
+    }
+    .hud-weapon { display: flex; align-items: center; gap: 8px; }
+    .hud-weapon .wname { font-weight: 700; font-size: 14px; }
+    .hud-weapon .pips { display: flex; gap: 3px; }
+    .hud-weapon .pip { width: 9px; height: 9px; border-radius: 2px; background: #223a66; box-shadow: inset 0 0 3px #000; }
+    .hud-weapon .pip.on { background: currentColor; box-shadow: 0 0 7px currentColor; }
+    .hud-shield { margin-top: 6px; color: #6fe0ff; opacity: 0; transition: opacity .3s; }
+    .hud-shield.on { opacity: 1; }
+    .hud-level {
+      position: absolute; right: 20px; bottom: 16px; color: #7fa8e8; font-size: 13px; letter-spacing: .2em; text-align: right;
+    }
+
+    /* Boss 血条 */
+    #boss-bar {
+      position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+      width: min(560px, 72vw); opacity: 0; transition: opacity .5s;
+    }
+    #boss-bar.on { opacity: 1; }
+    #boss-bar .boss-name { text-align: center; color: #ff9aa8; font-size: 13px; letter-spacing: .5em; margin-bottom: 5px; text-shadow: 0 0 10px rgba(255,60,90,.9); }
+    #boss-bar .bar-outer { height: 10px; border: 1px solid rgba(255,120,140,.6); border-radius: 5px; background: rgba(40,0,10,.55); overflow: hidden; }
+    #boss-bar .bar-inner { height: 100%; width: 100%; border-radius: 4px; background: linear-gradient(90deg, #ff2d55, #ff7a4d); box-shadow: 0 0 14px rgba(255,60,80,.9); transition: width .18s; }
+
+    /* ---------- 提示横幅 ---------- */
+    #banner {
+      position: fixed; top: 34%; left: 0; right: 0; z-index: 8; text-align: center; pointer-events: none;
+      font-size: clamp(26px, 5vw, 52px); font-weight: 800; letter-spacing: .5em; color: #cfe8ff;
+      text-shadow: 0 0 30px rgba(90,170,255,.95); opacity: 0; transition: opacity .45s;
+    }
+    #banner.show { opacity: 1; }
+    #banner .sub { font-size: .38em; letter-spacing: .8em; color: #8fb8ff; margin-top: 10px; font-weight: 400; }
+
+    /* ---------- 暂停 / 结算 ---------- */
+    #screen-pause, #screen-over, #screen-clear, #screen-victory { background: rgba(2,4,14,.78); backdrop-filter: blur(4px); }
+    .panel-title { font-size: clamp(30px, 6vw, 58px); font-weight: 800; letter-spacing: .35em; color: #aee2ff; text-shadow: 0 0 26px rgba(80,160,255,.8); }
+    .panel-title.danger { color: #ff8fa0; text-shadow: 0 0 26px rgba(255,60,90,.8); }
+    .panel-stats { margin-top: 30px; font-size: 17px; line-height: 2.1; color: #9fc4ff; letter-spacing: .18em; }
+    .panel-stats b { color: #ffd76a; font-size: 1.25em; }
+    .panel-hint { margin-top: 38px; font-size: 15px; color: #8fd8ff; letter-spacing: .3em; animation: blink 1.4s steps(2) infinite; }
+    .new-record { margin-top: 14px; color: #ffd76a; font-size: 19px; font-weight: 700; letter-spacing: .3em; text-shadow: 0 0 16px rgba(255,200,60,.9); }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="vignette"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div>
+        <div class="hud-score" id="hud-score">00000000</div>
+        <div class="hud-hiscore" id="hud-hiscore">HI 00000000</div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-lives" id="hud-lives"></div>
+        <div class="hud-bombs" id="hud-bombs"></div>
+      </div>
+    </div>
+    <div id="boss-bar"><div class="boss-name" id="boss-name"></div><div class="bar-outer"><div class="bar-inner" id="boss-hp"></div></div></div>
+    <div class="hud-bottom">
+      <div class="hud-weapon" id="hud-weapon"><span class="wname"></span><span class="pips"></span></div>
+      <div class="hud-shield" id="hud-shield">◈ 能量护盾激活</div>
+    </div>
+    <div class="hud-level" id="hud-level"></div>
+  </div>
+
+  <!-- 关卡横幅 -->
+  <div id="banner"></div>
+
+  <!-- 标题画面 -->
+  <div id="screen-title" class="overlay">
+    <div class="game-logo">SPACE RAIDEN<small>星 际 雷 电 3 D</small></div>
+    <div class="menu-hint">按 ENTER / 点击屏幕 出击</div>
+    <div class="menu-controls">
+      <b>WASD / 方向键</b> 移动 &nbsp;·&nbsp; <b>自动射击</b> &nbsp;·&nbsp; <b>B / 空格</b> 炸弹 &nbsp;·&nbsp; <b>P / ESC</b> 暂停<br/>
+      拾取 <span style="color:#ff6a7a">红</span> / <span style="color:#5ab8ff">蓝</span> 能量体切换武器 · 同色升级火力
+    </div>
+    <div id="hiscore-title"></div>
+  </div>
+
+  <!-- 暂停 -->
+  <div id="screen-pause" class="overlay hidden">
+    <div class="panel-title">已 暂 停</div>
+    <div class="panel-hint">按 P / ESC 继续</div>
+  </div>
+
+  <!-- 游戏结束 -->
+  <div id="screen-over" class="overlay hidden">
+    <div class="panel-title danger">战 机 坠 毁</div>
+    <div class="panel-stats"></div>
+    <div class="panel-hint">按 ENTER 重新出击</div>
+  </div>
+
+  <!-- 过关 -->
+  <div id="screen-clear" class="overlay hidden">
+    <div class="panel-title">区 域 肃 清</div>
+    <div class="panel-stats"></div>
+    <div class="panel-hint">按 ENTER 进入下一空域</div>
+  </div>
+
+  <!-- 通关 -->
+  <div id="screen-victory" class="overlay hidden">
+    <div class="panel-title">银 河 解 放</div>
+    <div class="panel-stats"></div>
+    <div class="panel-hint">按 ENTER 返回标题</div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

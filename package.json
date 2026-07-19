@@ -1,0 +1,19 @@
+{
+  "name": "space-raiden-3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Space Raiden 3D - 经典雷电纵向卷轴 + 3D 太空射击游戏",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.166.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1",
+    "vite": "^5.4.0"
+  }
+}
