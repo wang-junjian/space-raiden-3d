@@ -2,6 +2,10 @@
 
 经典雷电纵向卷轴 × 全 3D 画面的太空射击游戏。纯 Three.js 打造，所有模型与音效均为程序化生成，零外部资源依赖。
 
+> **在线试玩 / Play online**：<https://wangjunjian.com/space-raiden-3d/> — 打开即玩、零安装。桌面端用键盘，移动端触屏拖动、点击开始。
+>
+> **备用地址 / Fallback**：<https://wang-junjian.github.io/space-raiden-3d/>（GitHub Pages 官方入口，会自动 301 跳转到上面的自定义域；主站域名变更时仍可访问）。
+
 公元 2249 年，外星机械军团「湮灭舰队」入侵人类深空殖民地。驾驶最新型战机「雷电-X」，穿越碎石星环与幽灵星云，直捣湮灭母舰。
 
 ![](images/home.webp)
@@ -18,6 +22,21 @@ npm run dev      # 开发模式（默认 http://localhost:5173）
 npm run build    # 产出静态文件到 dist/
 npm run preview  # 预览构建产物
 ```
+
+## 构建与部署
+
+本仓库**只提交源码**：`dist/` 在 `.gitignore` 中，clone 后跑 `npm install && npm run build` 即可得到完整可玩站点。
+
+线上试玩页由 `.github/workflows/pages.yml` 在 push 到 `main` 时自动构建并发布，也可在 Actions 里手动 `workflow_dispatch` 重跑：
+
+```
+npm ci → npm run build → 构建可复现性检查（两次构建 SHA256 必须一致，且 build 不得改动任何被跟踪文件）
+       → 组装 site/（dist 全量 + .nojekyll）→ upload-pages-artifact → deploy-pages
+```
+
+自定义域来自用户站点仓库 `wang-junjian/wang-junjian.github.io` 已绑定的 `wangjunjian.com`：本仓库启用 Pages 后，项目站点自动挂到该域的 `/space-raiden-3d/` 路径下，所以 `wang-junjian.github.io/space-raiden-3d/` 会 301 跳转到这里。两个入口返回同一份产物，本仓库不配置 CNAME、不改动域名或 DNS。
+
+`vite.config.js` 把 `base` 设为 `./`：Pages 项目站点挂在子路径下，Vite 默认的绝对路径 `/assets/...` 在子路径下会 404。
 
 ## 操作
 
@@ -59,4 +78,10 @@ src/
 ├── systems/     碰撞、波次
 ├── data/        关卡波次与武器配置
 └── ui/          HUD 与界面
+```
+
+```
+.github/workflows/pages.yml   构建并发布在线试玩页
+vite.config.js                构建配置（base 相对路径，适配 Pages 子路径）
+scripts/                      冒烟测试与截图脚本（本地用）
 ```
